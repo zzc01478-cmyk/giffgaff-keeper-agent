@@ -1,0 +1,13 @@
+state.json
+state.json.*.tmp
+eval_history.json
+__pycache__/
+*.pyc
+.env
+*.env
+cookies.txt
+cookie*.txt
+*.cookie
+*.cookies
+*.log
+.DS_Store

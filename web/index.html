@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>giffgaff keepalive payload</title>
+  <style>
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f7f9;color:#111}
+    main{width:min(420px,calc(100vw - 32px));background:white;border:1px solid #ddd;border-radius:8px;padding:24px}
+    h1{font-size:22px;margin:0 0 8px}
+    p,label{line-height:1.5;color:#555}
+    label{display:block;margin:10px 0}
+    button{width:100%;border:0;border-radius:8px;padding:14px 16px;background:#111;color:white;font-size:16px;font-weight:700}
+    button:disabled{background:#aaa}
+    #status{margin-top:16px;padding:12px;border-radius:8px;background:#f1f3f5;color:#333}
+    small{display:block;margin-top:16px;color:#777;line-height:1.45}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>giffgaff 保号 payload</h1>
+    <p>关闭 Wi-Fi，并确认当前移动数据 SIM 是 giffgaff 后再点击。</p>
+    <label><input id="wifi" type="checkbox"> Wi-Fi 已关闭</label>
+    <label><input id="sim" type="checkbox"> 当前移动数据 SIM 是 giffgaff</label>
+    <button id="btn">加载 payload</button>
+    <div id="status">等待操作</div>
+    <small>加载成功只表示 payload 已下载。是否构成保号，取决于你当时是否确实使用 giffgaff 移动数据。</small>
+  </main>
+  <script>
+    const btn = document.getElementById("btn");
+    const status = document.getElementById("status");
+
+    btn.onclick = async () => {
+      if (!document.getElementById("wifi").checked || !document.getElementById("sim").checked) {
+        status.textContent = "请先确认 Wi-Fi 已关闭，且当前移动数据 SIM 是 giffgaff。";
+        return;
+      }
+      btn.disabled = true;
+      status.textContent = "正在加载...";
+      const start = Date.now();
+      try {
+        const url = `payload.bin?t=${Date.now()}&r=${Math.random().toString(36).slice(2)}`;
+        const response = await fetch(url, {cache: "no-store", headers: {"Cache-Control": "no-store"}});
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const item = {timestamp: Date.now(), size: blob.size};
+        const history = JSON.parse(localStorage.getItem("ggHistory") || "[]");
+        history.push(item);
+        localStorage.setItem("ggHistory", JSON.stringify(history.slice(-20)));
+        status.textContent = `本地观察到 payload 下载：${(blob.size / 1024).toFixed(2)} KB，用时 ${((Date.now() - start) / 1000).toFixed(2)} 秒。不是官方确认。`;
+      } catch (error) {
+        status.textContent = `加载失败：${error.message}`;
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  </script>
+</body>
+</html>
