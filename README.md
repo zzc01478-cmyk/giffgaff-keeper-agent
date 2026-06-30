@@ -1,8 +1,8 @@
 # giffgaff-keeper-agent
 
-Local-first giffgaff keepalive helper for Agents, Skills, and simple automation.
+本地优先的 giffgaff 保号辅助工具，适合给 Agent、Codex Skill 或简单自动化使用。
 
-It does not fetch an official giffgaff expiry date. giffgaff's rule is active use at least once every 6 months, so this tool records a confirmed local keepalive action and estimates:
+它不会获取 giffgaff 官方返回的“保号有效期”。giffgaff 的核心规则是 6 个月内至少有一次合格使用，所以本工具只记录你确认过的本地保号动作，并按保守规则估算：
 
 ```text
 official_expiry_at = null
@@ -11,10 +11,10 @@ expiry_source = estimated_from_last_activity
 remind_at = estimated_expiry_at - 30 days
 ```
 
-## Quick Start
+## 快速开始
 
 ```bash
-python3 giffgaff_keeper.py record --date 2026-06-30 --number-hint "****1234" --evidence-note "payload loaded on giffgaff mobile data" --confirm-valid-action
+python3 giffgaff_keeper.py record --date 2026-06-30 --number-hint "****1234" --evidence-note "已用 giffgaff 移动数据加载 payload" --confirm-valid-action
 python3 giffgaff_keeper.py status
 python3 giffgaff_keeper.py summary
 python3 giffgaff_keeper.py balance-cookie --cookie-file ./cookies.txt
@@ -24,81 +24,79 @@ python3 giffgaff_keeper.py balance-adb --read-sms --device <adb-device>
 python3 giffgaff_keeper.py lark-create --dry-run
 ```
 
-To perform a low-data keepalive, deploy `web/` somewhere static, open it on the phone with Wi-Fi off and giffgaff selected as the mobile-data SIM, then record the action:
+低流量保号：把 `web/` 部署到任意静态网站，在手机上关闭 Wi-Fi，确认当前移动数据 SIM 是 giffgaff，然后打开页面并加载 payload。确认完成后再记录：
 
 ```bash
-python3 giffgaff_keeper.py record --date 2026-06-30 --source mobile_data_payload --evidence-note "payload loaded after I confirmed Wi-Fi was off" --confirm-valid-action
+python3 giffgaff_keeper.py record --date 2026-06-30 --source mobile_data_payload --evidence-note "确认 Wi-Fi 关闭后已加载 payload" --confirm-valid-action
 ```
 
-Optional evidence file:
+可选证据文件：
 
 ```bash
 python3 giffgaff_keeper.py record --date 2026-06-30 --source mobile_data_payload --evidence-file screenshot.png --confirm-valid-action
 ```
 
-The file is not copied into state; only its SHA-256 is stored.
+工具不会复制证据文件，只会把文件的 SHA-256 写入 `state.json`。
 
-## Safety Boundary
+## 安全边界
 
-- Cookie upload is not required.
-- Phone number upload is not required.
-- The web page only downloads its local `payload.bin`.
-- A successful payload download is local evidence, not an official giffgaff confirmation.
-- `official_expiry_at` is always `null` unless giffgaff exposes an official value in the future.
-- Feishu/Lark calendar is only a reminder output.
+- 不要求上传 Cookie。
+- 不要求上传完整手机号。
+- 静态网页只下载本地 `payload.bin`。
+- payload 下载成功只是本地观察证据，不是 giffgaff 官方确认。
+- `official_expiry_at` 固定为 `null`，除非未来 giffgaff 提供官方有效期来源。
+- 飞书/Lark 日历只用于提醒，不是保号证明。
 
-## Balance Check
+## 查询余额
 
-Balance is optional and best-effort. Balance does not prove keepalive, and Cookie/ADB cannot fetch an official giffgaff expiry date. Parse failures are stored as `last_balance_error`; old successful balances are not overwritten by failures.
+余额查询是可选能力。余额不证明保号，Cookie/ADB 也不能拿到官方保号有效期。解析失败会写入 `last_balance_error`；旧的成功余额不会被失败结果覆盖。
 
-Cookie route:
+Cookie 路线：
 
 ```bash
 export GIFFGAFF_COOKIE='...'
 python3 giffgaff_keeper.py balance-cookie
 ```
 
-or:
+或：
 
 ```bash
+chmod 600 cookies.txt
 python3 giffgaff_keeper.py balance-cookie --cookie-file ./cookies.txt
 ```
 
-`balance-cookie` only sends the cookie to `https://*.giffgaff.com/`.
-If giffgaff redirects the dashboard request to login, the command records `cookie_login_required`.
-For cookie files, use `chmod 600 cookies.txt`.
+`balance-cookie` 只会把 Cookie 发给 `https://*.giffgaff.com/`。如果 giffgaff 把 dashboard 请求跳回登录页，命令会记录 `cookie_login_required`。
 
-ADB route:
+ADB/SMS 路线：
 
 ```bash
 python3 giffgaff_keeper.py balance-adb --draft
-# send the INFO SMS on the phone, then mark the send time:
+# 在手机上发送 INFO 短信后记录发送时间：
 python3 giffgaff_keeper.py balance-adb --sent-now
-# after the reply arrives:
+# 收到回复后读取 85075 新短信：
 python3 giffgaff_keeper.py balance-adb --read-sms --device <adb-device>
 ```
 
-`balance-adb --read-sms` only considers `85075` replies newer than the last `--draft`.
-Use `--slot <index>` and `--sub-id <id>` on dual-SIM Android phones when giffgaff is not the default SMS SIM.
+`balance-adb --read-sms` 只读取上次 `--draft` 或 `--sent-now` 之后来自 `85075` 的短信。双卡 Android 如果 giffgaff 不是默认短信 SIM，可以加 `--slot <index>` 和 `--sub-id <id>`。
 
-Use official channels where possible: giffgaff app/dashboard, call `43430`, or text `INFO` to `85075`.
+也可以使用官方渠道：giffgaff App/dashboard、拨打 `43430`，或发送 `INFO` 到 `85075`。
 
-Do not record `INFO` to `85075`, `43430`, member-services calls, emergency calls, freephone numbers, or other free-rated actions as keepalive activity.
+不要把 `INFO` 到 `85075`、`43430`、客服号码、紧急电话、免费电话或其他 free-rated 行为记录为保号动作。
 
-## User Output
+## 输出摘要
 
 ```bash
 python3 giffgaff_keeper.py summary
 ```
 
-This prints the balance if available and the estimated keepalive deadline. It still reports `official_expiry_at: null`.
+它会输出余额（如果可用）和估算保号日期，同时保留 `official_expiry_at: null`。
 
-## Files
+## 文件
 
 ```text
-giffgaff_keeper.py  CLI and date calculation
-web/index.html      static mobile-data payload page
-web/payload.bin     about 128 KiB random payload
-skill/SKILL.md      Agent instructions
-state.json          local state, ignored by git
+giffgaff_keeper.py  CLI 和日期计算
+web/index.html      静态移动数据 payload 页面
+web/payload.bin     约 128 KiB 的随机 payload
+skill/SKILL.md      Agent 使用说明
+state.json          本地状态文件，已被 gitignore
 ```
